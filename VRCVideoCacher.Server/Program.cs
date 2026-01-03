@@ -1,3 +1,4 @@
+using System.Reflection;
 using Serilog;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
@@ -11,7 +12,8 @@ internal static class Program
     public const string Version = "2025.11.24";
     public static readonly ILogger Logger = Log.ForContext("SourceContext", "Core");
     public static readonly string CurrentProcessPath = Path.GetDirectoryName(Environment.ProcessPath) ?? string.Empty;
-    public static readonly string DataPath = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+    private static readonly string AssemblyPath = Assembly.GetExecutingAssembly().Location;
+    public static readonly string DataPath = Path.GetDirectoryName(AssemblyPath) ?? CurrentProcessPath;
 
     public static async Task Main(string[] args)
     {
