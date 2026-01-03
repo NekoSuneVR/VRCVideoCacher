@@ -7,6 +7,7 @@ public static class RemoteServerProxy
 {
     private static readonly ILogger Log = Program.Logger.ForContext(typeof(RemoteServerProxy));
     private static readonly HttpClient HttpClient = new();
+    private static int _timeoutSeconds = -1;
 
     public static bool IsEnabled =>
         ConfigManager.Config.RemoteServerEnabled &&
@@ -24,7 +25,17 @@ public static class RemoteServerProxy
         var seconds = ConfigManager.Config.RemoteServerTimeoutSeconds;
         if (seconds <= 0)
             seconds = 15;
+        if (_timeoutSeconds == seconds)
+            return;
+
+        if (_timeoutSeconds != -1)
+        {
+            Log.Warning("RemoteServerTimeoutSeconds cannot be changed after first request; using {Timeout}s.", _timeoutSeconds);
+            return;
+        }
+
         HttpClient.Timeout = TimeSpan.FromSeconds(seconds);
+        _timeoutSeconds = seconds;
     }
 
     public static async Task<(bool Success, int StatusCode, string Body)> GetVideo(

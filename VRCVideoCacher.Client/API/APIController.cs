@@ -24,24 +24,18 @@ public class ApiController : WebApiController
             return;
         }
 
-        if (RemoteServerProxy.IsEnabled)
+        if (!RemoteServerProxy.IsEnabled)
         {
-            var (success, status, body) = await RemoteServerProxy.SendCookies(cookies);
-            HttpContext.Response.StatusCode = status;
-            await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
-            if (!success)
-                Log.Warning("Failed to forward cookies to remote server.");
+            HttpContext.Response.StatusCode = 503;
+            await HttpContext.SendStringAsync("Remote server not configured.", "text/plain", Encoding.UTF8);
             return;
         }
-        
-        await File.WriteAllTextAsync(YtdlManager.CookiesPath, cookies);
 
-        HttpContext.Response.StatusCode = 200;
-        await HttpContext.SendStringAsync("Cookies received.", "text/plain", Encoding.UTF8);
-
-        Log.Information("Received Youtube cookies from browser extension.");
-        if (!ConfigManager.Config.ytdlUseCookies) 
-            Log.Warning("Config is NOT set to use cookies from browser extension.");
+        var (success, status, body) = await RemoteServerProxy.SendCookies(cookies);
+        HttpContext.Response.StatusCode = status;
+        await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
+        if (!success)
+            Log.Warning("Failed to forward cookies to remote server.");
     }
 
     [Route(HttpVerbs.Get, "/getvideo")]
@@ -80,84 +74,31 @@ public class ApiController : WebApiController
             return;
         }
 
-        var useRemote = RemoteServerProxy.IsEnabled &&
-                        (!ConfigManager.Config.RemoteServerYouTubeOnly || videoInfo.UrlType == UrlType.YouTube);
-        if (useRemote)
+        if (videoInfo.UrlType != UrlType.YouTube)
         {
-            var (remoteSuccess, status, body) = await RemoteServerProxy.GetVideo(requestUrl, avPro, source);
-            if (remoteSuccess)
-            {
-                Log.Information("Responding with Remote URL: {URL}", body);
-                await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
-                return;
-            }
-
-            if (!ConfigManager.Config.RemoteServerFallbackToLocal)
-            {
-                HttpContext.Response.StatusCode = status;
-                await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
-                return;
-            }
-        }
-
-        if (string.IsNullOrEmpty(videoInfo.VideoId))
-        {
-            Log.Information("Failed to get Video ID: Bypassing.");
+            Log.Information("Non-YouTube URL: bypassing.");
             await HttpContext.SendStringAsync(string.Empty, "text/plain", Encoding.UTF8);
             return;
         }
 
-        if (requestUrl.StartsWith("https://mightygymcdn.nyc3.cdn.digitaloceanspaces.com"))
+        if (!RemoteServerProxy.IsEnabled)
         {
-            Log.Information("URL Is Mighty Gym: Bypassing.");
-            await HttpContext.SendStringAsync(string.Empty, "text/plain", Encoding.UTF8);
+            Log.Error("Remote server not configured for YouTube.");
+            HttpContext.Response.StatusCode = 503;
+            await HttpContext.SendStringAsync("Remote server not configured.", "text/plain", Encoding.UTF8);
             return;
         }
 
-        if (source == "resonite")
+        var (remoteSuccess, status, body) = await RemoteServerProxy.GetVideo(requestUrl, avPro, source);
+        if (remoteSuccess)
         {
-            Log.Information("Request sent from resonite sending json.");
-            await HttpContext.SendStringAsync(await VideoId.GetURLResonite(requestUrl), "text/plain", Encoding.UTF8);
+            Log.Information("Responding with Remote URL: {URL}", body);
+            await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
             return;
         }
 
-        if (ConfigManager.Config.CacheYouTubeMaxResolution <= 360)
-            avPro = false; // disable browser impersonation when it isn't needed
-
-        // pls no villager
-        if (requestUrl.StartsWith("https://anime.illumination.media"))
-            avPro = true;
-        else if (requestUrl.Contains(".imvrcdn.com") ||
-                 (requestUrl.Contains(".illumination.media") && !requestUrl.StartsWith("https://yt.illumination.media")))
-        {
-            Log.Information("URL Is Illumination media: Bypassing.");
-            await HttpContext.SendStringAsync(string.Empty, "text/plain", Encoding.UTF8);
-            return;
-        }
-
-        // bypass vfi - cinema 
-        if (requestUrl.StartsWith("https://virtualfilm.institute/"))
-        {
-            Log.Information("URL Is VFI -Cinema: Bypassing.");
-            await HttpContext.SendStringAsync(string.Empty, "text/plain", Encoding.UTF8);
-            return;
-        }
-
-        var (response, success) = await VideoId.GetUrl(videoInfo, avPro);
-        if (!success)
-        {
-            Log.Error("Get URL: {error}", response);
-            // only send the error back if it's for YouTube, otherwise let it play the request URL normally
-            if (videoInfo.UrlType == UrlType.YouTube)
-            {
-                HttpContext.Response.StatusCode = 500;
-                await HttpContext.SendStringAsync(response, "text/plain", Encoding.UTF8);
-                return;
-            }
-            response = string.Empty;
-        }
-        
-        Log.Information("Responding with URL: {URL}", response);
-        await HttpContext.SendStringAsync(response, "text/plain", Encoding.UTF8);
+        Log.Error("All remote nodes failed to fetch URL.");
+        HttpContext.Response.StatusCode = status;
+        await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
     }
 }

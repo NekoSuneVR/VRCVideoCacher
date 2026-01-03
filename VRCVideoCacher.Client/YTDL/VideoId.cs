@@ -135,8 +135,6 @@ public class VideoId
         var additionalArgs = ConfigManager.Config.ytdlAdditionalArgs;
         var potArgs = YtdlArgs.GetPoTokenArgs();
         var cookieArg = string.Empty;
-        if (Program.IsCookiesEnabledAndValid())
-            cookieArg = $"--cookies \"{YtdlManager.CookiesPath}\"";
 
         var process = new Process
         {
@@ -190,8 +188,6 @@ public class VideoId
         var additionalArgs = ConfigManager.Config.ytdlAdditionalArgs;
         var potArgs = YtdlArgs.GetPoTokenArgs();
         var cookieArg = string.Empty;
-        if (Program.IsCookiesEnabledAndValid())
-            cookieArg = $"--cookies \"{YtdlManager.CookiesPath}\"";
         
         var languageArg = string.IsNullOrEmpty(ConfigManager.Config.ytdlDubLanguage)
             ? string.Empty
@@ -257,8 +253,6 @@ public class VideoId
         var additionalArgs = ConfigManager.Config.ytdlAdditionalArgs;
         var potArgs = YtdlArgs.GetPoTokenArgs();
         var cookieArg = string.Empty;
-        if (Program.IsCookiesEnabledAndValid())
-            cookieArg = $"--cookies \"{YtdlManager.CookiesPath}\"";
         
         var languageArg = string.IsNullOrEmpty(ConfigManager.Config.ytdlDubLanguage)
             ? string.Empty

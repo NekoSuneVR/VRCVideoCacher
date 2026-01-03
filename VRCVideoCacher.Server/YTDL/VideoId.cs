@@ -27,6 +27,7 @@ public class VideoId
         "tv_embedded",
         "web_music"
     ];
+    private static string? LastWorkingYouTubeClient;
 
     private static bool IsYouTubeUrl(string url)
     {
@@ -60,6 +61,18 @@ public class VideoId
     private static string GetPlayerClientArgs(string client)
     {
         return $"--extractor-args \"youtube:player_client={client}\"";
+    }
+
+    private static IEnumerable<string> GetOrderedPlayerClients()
+    {
+        var preferred = !string.IsNullOrWhiteSpace(ConfigManager.Config.YouTubePlayerClientPreferred)
+            ? ConfigManager.Config.YouTubePlayerClientPreferred
+            : LastWorkingYouTubeClient;
+        if (string.IsNullOrEmpty(preferred))
+            return YouTubePlayerClients;
+
+        return new[] { preferred }
+            .Concat(YouTubePlayerClients.Where(c => !string.Equals(c, preferred, StringComparison.OrdinalIgnoreCase)));
     }
     
     public static async Task<VideoInfo?> GetVideoId(string url, bool avPro)
@@ -163,7 +176,7 @@ public class VideoId
             cookieArg = $"--cookies \"{YtdlManager.CookiesPath}\"";
 
         var lastError = string.Empty;
-        foreach (var client in YouTubePlayerClients)
+        foreach (var client in GetOrderedPlayerClients())
         {
             var playerArgs = GetPlayerClientArgs(client);
             var process = new Process
@@ -201,6 +214,8 @@ public class VideoId
             if (data.duration > ConfigManager.Config.CacheYouTubeMaxLength * 60)
                 throw new Exception($"Failed to get video ID: Video is longer than configured max length ({data.duration / 60}/{ConfigManager.Config.CacheYouTubeMaxLength})");
         
+            LastWorkingYouTubeClient = client;
+            ConfigManager.Config.YouTubePlayerClientPreferred = client;
             return data.id;
         }
 
@@ -282,11 +297,15 @@ public class VideoId
             return await GetUrlWithClient(videoInfo, avPro, string.Empty);
 
         Tuple<string, bool>? lastResult = null;
-        foreach (var client in YouTubePlayerClients)
+        foreach (var client in GetOrderedPlayerClients())
         {
             lastResult = await GetUrlWithClient(videoInfo, avPro, client);
             if (lastResult.Item2)
+            {
+                LastWorkingYouTubeClient = client;
+                ConfigManager.Config.YouTubePlayerClientPreferred = client;
                 return lastResult;
+            }
             if (!IsLoginRequired(lastResult.Item1))
                 break;
         }

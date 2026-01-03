@@ -31,6 +31,8 @@ public class ConfigManager
             Config.ytdlWebServerURL = Config.ytdlWebServerURL.TrimEnd('/');
         if (!string.IsNullOrWhiteSpace(Config.YouTubePoTokenUrl))
             Config.YouTubePoTokenUrl = Config.YouTubePoTokenUrl.Trim().TrimEnd('/');
+        if (!string.IsNullOrWhiteSpace(Config.YouTubePlayerClientPreferred))
+            Config.YouTubePlayerClientPreferred = Config.YouTubePlayerClientPreferred.Trim();
         Config.WebServerBindUrls ??= [];
         if (Config.WebServerBindUrls.Length > 0)
         {
@@ -86,6 +88,7 @@ public class ConfigModel
     public string ytdlDubLanguage = string.Empty;
     public int ytdlDelay = 0;
     public string YouTubePoTokenUrl = "";
+    public string YouTubePlayerClientPreferred = "";
     public string CachedAssetPath = "";
     public string[] WebServerBindUrls = ["http://127.0.0.1:9696", "http://localhost:9696"];
     public string[] BlockedUrls = [];

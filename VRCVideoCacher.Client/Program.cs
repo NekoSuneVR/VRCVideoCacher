@@ -4,7 +4,6 @@ using Serilog;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
 using VRCVideoCacher.API;
-using VRCVideoCacher.YTDL;
 
 namespace VRCVideoCacher;
 
@@ -50,42 +49,16 @@ internal static class Program
 
         YtdlpHash = GetOurYtdlpHash();
 
-        if (ConfigManager.Config.ytdlAutoUpdate && !string.IsNullOrEmpty(ConfigManager.Config.ytdlPath))
-        {
-            await YtdlManager.TryDownloadYtdlp();
-            YtdlManager.StartYtdlDownloadThread();
-            _ = YtdlManager.TryDownloadDeno();
-            _ = YtdlManager.TryDownloadFfmpeg();
-        }
-
         if (OperatingSystem.IsWindows())
             AutoStartShortcut.TryUpdateShortcutPath();
         WebServer.Init();
         FileTools.BackupAllYtdl();
 
-        if (ConfigManager.Config.ytdlUseCookies && !IsCookiesEnabledAndValid())
-            Logger.Warning("No cookies found, please use the browser extension to send cookies or disable \"ytdlUseCookies\" in config.");
-
         // run after init to avoid text spam blocking user input
         if (OperatingSystem.IsWindows())
             _ = WinGet.TryInstallPackages();
 
-        if (YtdlManager.GlobalYtdlConfigExists())
-            Logger.Error("Global yt-dlp config file found in \"%AppData%\\yt-dlp\". Please delete it to avoid conflicts with VRCVideoCacher.");
-        
         await Task.Delay(-1);
-    }
-
-    public static bool IsCookiesEnabledAndValid()
-    {
-        if (!ConfigManager.Config.ytdlUseCookies)
-            return false;
-
-        if (!File.Exists(YtdlManager.CookiesPath))
-            return false;
-        
-        var cookies = File.ReadAllText(YtdlManager.CookiesPath);
-        return IsCookiesValid(cookies);
     }
 
     public static bool IsCookiesValid(string cookies)
@@ -101,7 +74,13 @@ internal static class Program
 
     public static Stream GetYtDlpStub()
     {
-        return GetEmbeddedResource("VRCVideoCacher.yt-dlp-stub.exe");
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = assembly.GetManifestResourceNames()
+            .FirstOrDefault(name => name.EndsWith("yt-dlp-stub.exe", StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrEmpty(resourceName))
+            throw new Exception("yt-dlp-stub.exe not found in resources.");
+
+        return GetEmbeddedResource(resourceName);
     }
     
     private static Stream GetEmbeddedResource(string resourceName)
