@@ -52,8 +52,6 @@ internal static class Program
         WebServer.Init();
         await BulkPreCache.DownloadFileList();
 
-        if (ConfigManager.Config.ytdlUseCookies && !IsCookiesEnabledAndValid())
-            Logger.Information("YouTube cookies not present; continuing without cookies.");
 
         CacheManager.Init();
 
