@@ -105,6 +105,22 @@ public class ApiController : WebApiController
                 return;
             }
 
+            if (videoInfo.UrlType == UrlType.YouTube && ConfigManager.Config.CacheYouTube)
+            {
+                var downloadedFile = await VideoDownloader.DownloadYouTubeVideoNow(videoInfo);
+                if (string.IsNullOrEmpty(downloadedFile))
+                {
+                    HttpContext.Response.StatusCode = 500;
+                    await HttpContext.SendStringAsync("Failed to download YouTube video.", "text/plain", Encoding.UTF8);
+                    return;
+                }
+
+                var url = $"{ConfigManager.Config.ytdlWebServerURL}/{downloadedFile}";
+                Log.Information("Responding with Cached URL: {URL}", url);
+                await HttpContext.SendStringAsync(url, "text/plain", Encoding.UTF8);
+                return;
+            }
+
             if (requestUrl.StartsWith("https://mightygymcdn.nyc3.cdn.digitaloceanspaces.com"))
             {
                 Log.Information("URL Is Mighty Gym: Bypassing.");
