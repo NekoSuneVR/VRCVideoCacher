@@ -63,6 +63,11 @@ public class ConfigManager
         File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(Config, Formatting.Indented));
         Log.Information("Config saved.");
     }
+
+    public static void SaveConfig()
+    {
+        TrySaveConfig();
+    }
     
     private static void FirstRun()
     {

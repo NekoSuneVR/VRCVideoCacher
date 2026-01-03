@@ -216,6 +216,7 @@ public class VideoId
         
             LastWorkingYouTubeClient = client;
             ConfigManager.Config.YouTubePlayerClientPreferred = client;
+            ConfigManager.SaveConfig();
             return data.id;
         }
 
@@ -304,6 +305,7 @@ public class VideoId
             {
                 LastWorkingYouTubeClient = client;
                 ConfigManager.Config.YouTubePlayerClientPreferred = client;
+                ConfigManager.SaveConfig();
                 return lastResult;
             }
             if (!IsLoginRequired(lastResult.Item1))
