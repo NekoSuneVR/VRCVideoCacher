@@ -87,7 +87,7 @@ public class ConfigModel
     public int ytdlDelay = 0;
     public string YouTubePoTokenUrl = "";
     public string CachedAssetPath = "";
-    public string[] WebServerBindUrls = ["http://0.0.0.0:9696"];
+    public string[] WebServerBindUrls = ["http://127.0.0.1:9696", "http://localhost:9696"];
     public string[] BlockedUrls = [];
     public string BlockRedirect = "https://www.youtube.com/watch?v=byv2bKekeWQ";
     public bool CacheYouTube = true;

@@ -53,7 +53,7 @@ internal static class Program
         await BulkPreCache.DownloadFileList();
 
         if (ConfigManager.Config.ytdlUseCookies && !IsCookiesEnabledAndValid())
-            Logger.Warning("No cookies found, please use the browser extension to send cookies or disable \"ytdlUseCookies\" in config.");
+            Logger.Information("YouTube cookies not present; continuing without cookies.");
 
         CacheManager.Init();
 
