@@ -11,7 +11,7 @@ internal static class Program
     public const string Version = "2025.11.24";
     public static readonly ILogger Logger = Log.ForContext("SourceContext", "Core");
     public static readonly string CurrentProcessPath = Path.GetDirectoryName(Environment.ProcessPath) ?? string.Empty;
-    public static readonly string DataPath = CurrentProcessPath;
+    public static readonly string DataPath = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
 
     public static async Task Main(string[] args)
     {
