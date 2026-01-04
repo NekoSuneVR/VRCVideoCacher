@@ -50,6 +50,8 @@ public class CacheManager
         foreach (var path in files)
         {
             var file = Path.GetFileName(path);
+            if (!IsVideoFile(file))
+                continue;
             AddToCache(file);
         }
     }
@@ -69,7 +71,7 @@ public class CacheManager
         {
             var oldestFile = oldestFiles.First();
             var filePath = Path.Combine(CachePath, oldestFile.Value.FileName);
-            if (File.Exists(filePath))
+            if (IsVideoFile(oldestFile.Value.FileName) && File.Exists(filePath))
             {
                 File.Delete(filePath);
                 cacheSize -= oldestFile.Value.Size;
@@ -81,6 +83,9 @@ public class CacheManager
 
     public static void AddToCache(string fileName)
     {
+        if (!IsVideoFile(fileName))
+            return;
+
         var filePath = Path.Combine(CachePath, fileName);
         if (!File.Exists(filePath))
             return;
@@ -147,10 +152,17 @@ public class CacheManager
                 continue;
 
             var filePath = Path.Combine(CachePath, cache.Value.FileName);
-            if (File.Exists(filePath))
+            if (IsVideoFile(cache.Value.FileName) && File.Exists(filePath))
                 File.Delete(filePath);
             CachedAssets.TryRemove(cache.Key, out _);
         }
+    }
+
+    private static bool IsVideoFile(string fileName)
+    {
+        var ext = Path.GetExtension(fileName);
+        return ext.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ||
+               ext.Equals(".webm", StringComparison.OrdinalIgnoreCase);
     }
     
     private static long GetCacheSize()
