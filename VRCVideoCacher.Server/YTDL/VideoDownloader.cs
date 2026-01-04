@@ -88,8 +88,10 @@ public class VideoDownloader
         await DownloadLock.WaitAsync();
         try
         {
-            var url = videoInfo.VideoUrl;
-            string? videoId;
+        var url = videoInfo.VideoUrl;
+        var videoId = videoInfo.VideoId;
+        if (string.IsNullOrEmpty(videoId))
+        {
             try
             {
                 videoId = await VideoId.TryGetYouTubeVideoId(url);
@@ -99,6 +101,7 @@ public class VideoDownloader
                 Log.Error("Not downloading YouTube video: {URL} {ex}", url, ex.Message);
                 return null;
             }
+        }
 
             var fileName = $"{videoId}.{videoInfo.DownloadFormat.ToString().ToLower()}";
             var filePath = Path.Combine(CacheManager.CachePath, fileName);
