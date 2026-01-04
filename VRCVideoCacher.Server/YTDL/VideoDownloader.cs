@@ -18,6 +18,7 @@ public class VideoDownloader
     private static readonly SemaphoreSlim DownloadLock = new(1, 1);
     private static readonly string TempDownloadMp4Path;
     private static readonly string TempDownloadWebmPath;
+    private static readonly ConcurrentDictionary<string, byte> ActiveDownloads = new();
     
     static VideoDownloader()
     {
@@ -64,6 +65,9 @@ public class VideoDownloader
     
     public static void QueueDownload(VideoInfo videoInfo)
     {
+        if (IsPendingDownload(videoInfo))
+            return;
+
         if (DownloadQueue.Any(x => x.VideoId == videoInfo.VideoId &&
                                    x.DownloadFormat == videoInfo.DownloadFormat))
         {
@@ -85,9 +89,6 @@ public class VideoDownloader
             return null;
         }
 
-        await DownloadLock.WaitAsync();
-        try
-        {
         var url = videoInfo.VideoUrl;
         var videoId = videoInfo.VideoId;
         if (string.IsNullOrEmpty(videoId))
@@ -102,16 +103,27 @@ public class VideoDownloader
                 return null;
             }
         }
+        if (string.IsNullOrEmpty(videoInfo.VideoId))
+            videoInfo.VideoId = videoId;
 
-            var fileName = $"{videoId}.{videoInfo.DownloadFormat.ToString().ToLower()}";
-            var filePath = Path.Combine(CacheManager.CachePath, fileName);
-            if (File.Exists(filePath))
-            {
-                CacheManager.AddToCache(fileName);
-                Log.Information("YouTube Video already cached: {URL}", $"{ConfigManager.Config.ytdlWebServerURL}/{fileName}");
-                return fileName;
-            }
+        var fileName = $"{videoId}.{videoInfo.DownloadFormat.ToString().ToLower()}";
+        var filePath = Path.Combine(CacheManager.CachePath, fileName);
+        if (File.Exists(filePath))
+        {
+            CacheManager.AddToCache(fileName);
+            Log.Information("YouTube Video already cached: {URL}", $"{ConfigManager.Config.ytdlWebServerURL}/{fileName}");
+            return fileName;
+        }
 
+        if (!TryBeginDownload(videoInfo))
+        {
+            Log.Information("Download already in progress: {URL}", url);
+            return null;
+        }
+
+        await DownloadLock.WaitAsync();
+        try
+        {
             if (File.Exists(TempDownloadMp4Path))
             {
                 Log.Error("Temp file already exists, deleting...");
@@ -227,12 +239,19 @@ public class VideoDownloader
         }
         finally
         {
+            EndDownload(videoInfo);
             DownloadLock.Release();
         }
     }
     
     private static async Task DownloadVideoWithId(VideoInfo videoInfo)
     {
+        if (!TryBeginDownload(videoInfo))
+        {
+            Log.Information("Download already in progress: {URL}", videoInfo.VideoUrl);
+            return;
+        }
+
         await DownloadLock.WaitAsync();
         try
         {
@@ -287,7 +306,38 @@ public class VideoDownloader
         }
         finally
         {
+            EndDownload(videoInfo);
             DownloadLock.Release();
         }
+    }
+
+    public static bool IsPendingDownload(VideoInfo videoInfo)
+    {
+        if (string.IsNullOrEmpty(videoInfo.VideoId))
+            return false;
+
+        var key = GetDownloadKey(videoInfo);
+        return ActiveDownloads.ContainsKey(key) ||
+               DownloadQueue.Any(x => x.VideoId == videoInfo.VideoId &&
+                                      x.DownloadFormat == videoInfo.DownloadFormat);
+    }
+
+    private static bool TryBeginDownload(VideoInfo videoInfo)
+    {
+        if (string.IsNullOrEmpty(videoInfo.VideoId))
+            return false;
+        return ActiveDownloads.TryAdd(GetDownloadKey(videoInfo), 0);
+    }
+
+    private static void EndDownload(VideoInfo videoInfo)
+    {
+        if (string.IsNullOrEmpty(videoInfo.VideoId))
+            return;
+        ActiveDownloads.TryRemove(GetDownloadKey(videoInfo), out _);
+    }
+
+    private static string GetDownloadKey(VideoInfo videoInfo)
+    {
+        return $"{videoInfo.VideoId}:{videoInfo.DownloadFormat}";
     }
 }

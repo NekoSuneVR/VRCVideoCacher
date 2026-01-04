@@ -107,6 +107,30 @@ public class ApiController : WebApiController
 
             if (videoInfo.UrlType == UrlType.YouTube && ConfigManager.Config.CacheYouTube)
             {
+                if (VideoDownloader.IsPendingDownload(videoInfo))
+                {
+                    var (pendingUrl, pendingSuccess) = await VideoId.GetUrl(videoInfo, avPro);
+                    if (pendingSuccess && !string.IsNullOrEmpty(pendingUrl))
+                    {
+                        Log.Information("Download in progress for {VideoId}, responding with direct URL: {URL}", videoInfo.VideoId, pendingUrl);
+                        await HttpContext.SendStringAsync(pendingUrl, "text/plain", Encoding.UTF8);
+                        return;
+                    }
+
+                    var redirectUrl = ConfigManager.Config.DownloadInProgressRedirectUrl?.Trim();
+                    if (!string.IsNullOrEmpty(redirectUrl))
+                    {
+                        Log.Information("Download in progress for {VideoId}, responding with temporary URL: {URL}", videoInfo.VideoId, redirectUrl);
+                        await HttpContext.SendStringAsync(redirectUrl, "text/plain", Encoding.UTF8);
+                        return;
+                    }
+
+                    Log.Information("Download in progress for {VideoId}, responding with status 409.", videoInfo.VideoId);
+                    HttpContext.Response.StatusCode = 409;
+                    await HttpContext.SendStringAsync("Downloading still.", "text/plain", Encoding.UTF8);
+                    return;
+                }
+
                 var downloadedFile = await VideoDownloader.DownloadYouTubeVideoNow(videoInfo);
                 if (string.IsNullOrEmpty(downloadedFile))
                 {

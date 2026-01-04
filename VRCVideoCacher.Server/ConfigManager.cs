@@ -98,6 +98,7 @@ public class ConfigModel
     public string[] WebServerBindUrls = ["http://127.0.0.1:9696", "http://localhost:9696"];
     public string[] BlockedUrls = [];
     public string BlockRedirect = "https://www.youtube.com/watch?v=byv2bKekeWQ";
+    public string DownloadInProgressRedirectUrl = "https://www.google.com";
     public bool CacheYouTube = true;
     public int CacheYouTubeMaxResolution = 2160;
     public int CacheYouTubeMaxLength = 120;
