@@ -82,6 +82,7 @@ public class ConfigModel
     public bool PatchResonite = false;
     public bool PatchVRC = true;
     public bool AutoUpdate = true;
+    public bool AutoInstallCodecs = false;
     public bool LocalVideoCacheEnabled = false;
     public string LocalVideoCachePath = "";
     public string[] VideoBypassBaseUrls =

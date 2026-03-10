@@ -21,6 +21,12 @@ public class WinGet
     [SupportedOSPlatform("windows")]
     public static async Task TryInstallPackages()
     {
+        if (!ConfigManager.Config.AutoInstallCodecs)
+        {
+            Log.Information("Codec auto-install is disabled.");
+            return;
+        }
+
         if (_skipWingetChecks)
             return;
 
@@ -73,7 +79,7 @@ public class WinGet
             if (ShouldSkipWinget(error) || ShouldSkipWinget(output))
             {
                 LogWingetUnavailable(error, output);
-                return true;
+                return false;
             }
             return process.ExitCode == 0;
         }
