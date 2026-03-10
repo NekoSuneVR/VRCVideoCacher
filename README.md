@@ -48,6 +48,8 @@ You can think of it like a managed yt-dlp API flow for VRChat-style video playba
 
 This also means platform support can move faster. As the server-side integrations improve, new sites and media sources can be added much more quickly.
 
+This fork is also useful for users in places where YouTube access is blocked, restricted, or unreliable. In some regions, people may need to use a VPN just to reach YouTube at all, which is not practical or fair when they only want to play a song or video inside a game. A proxy-based approach helps reduce that friction and makes more of that content usable again, including music that may only be available on YouTube.
+
 ### Fix YouTube videos sometimes failing to play
 
 > Loading failed. File not found, codec not supported, video resolution too high or insufficient system resources.
