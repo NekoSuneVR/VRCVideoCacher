@@ -2,23 +2,44 @@
 
 ### What is VRCVideoCacher?
 
-VRCVideoCacher is a tool used to cache VRChat videos to your local disk and/or fix YouTube videos from failing to load.
+This repository is a fork of the original [EllyVR/VRCVideoCacher](https://github.com/EllyVR/VRCVideoCacher), adapted and managed around the NekoSuneVR video infrastructure.
+
+This fork is focused on simple video proxying for VRChat and Resonite. It does not expect you to download and manage video files on your own PC. NekoSuneVR servers handle the heavy lifting for you, including remote downloading, proxy delivery, and server-side storage workflows.
 
 ### How does it work?
 
-It replaces VRChats yt-dlp.exe with our own stub yt-dlp, this gets replaced on application startup and is restored on exit.
+It replaces VRChat's `yt-dlp.exe` with our own stub, and the local client rewrites supported video URLs into the NekoSuneVR video proxy endpoint. From there, the server handles the actual media retrieval and playback delivery.
+
+In practice, the app is intentionally simple:
+- paste or play a supported URL
+- the client proxies the URL
+- the video plays
+
+No local video cache management is required for normal use.
 
 Auto install missing codecs: [VP9](https://apps.microsoft.com/detail/9n4d0msmp0pt) | [AV1](https://apps.microsoft.com/detail/9mvzqvxjbq9v) | [AC-3](https://apps.microsoft.com/detail/9nvjqjbdkn97)
 
-### Are there any risks involved?
+### What changed in this fork?
 
-From VRC or EAC? no.
+- Forked from the original EllyVR project and reworked for NekoSuneVR-managed servers.
+- No need to manually download and store video files on your PC for normal playback.
+- No need to provide your own YouTube cookies. NekoSuneVR manages the server-side handling for you.
+- Playback is proxy-based: the app mainly rewrites URLs and lets the server do the rest.
+- Added Suno integration so Suno links can be played through the video player.
 
-From YouTube/Google? maybe, we strongly recommend you use an alternative Google account if possible.
+### Supported links
 
-### How to circumvent YouTube bot detection
+- YouTube
+- Suno
+- Direct media links that can be proxied through the video bypass endpoint
 
-In order to fix YouTube videos failing to load, you'll need to install our Chrome extension from [here](https://chromewebstore.google.com/detail/vrcvideocacher-cookies-ex/kfgelknbegappcajiflgfbjbdpbpokge) or Firefox from [here](https://addons.mozilla.org/en-US/firefox/addon/vrcvideocachercookiesexporter), more info [here](https://github.com/clienthax/VRCVideoCacherBrowserExtension). Visit [YouTube.com](https://www.youtube.com) while signed in, at least once while VRCVideoCacher is running, after VRCVideoCacher has obtained your cookies you can safely uninstall the extension, although be aware that if you visit YouTube again with the same browser while the account is still logged in, YouTube will refresh you cookies invalidating the cookies stored in VRCVideoCacher. To circumvent this I recommended deleting your YouTube cookies from your browser after VRCVideoCacher has obtained them, or if you're using your main YouTube account leave the extension installed, or maybe even use an entirely separate web browser from your main one to keep things simple.
+### Suno integration
+
+This fork adds Suno link support through the proxy site, allowing Suno songs to be used directly in supported video players.
+
+### Why no YouTube cookies?
+
+Unlike the upstream local-first workflow, this fork is built around NekoSuneVR-managed server infrastructure. That means the cookie management, downloading flow, proxying, and media delivery are handled server-side instead of on your local machine.
 
 ### Fix YouTube videos sometimes failing to play
 
@@ -37,18 +58,25 @@ Run notepad as Admin then browse to `C:\Windows\System32\drivers\etc\hosts` add 
 ### Running on Linux
 
 - Install `dotnet-runtime-10.0`
-- Run with `./VRCVideoCacher`
-- By default VRCVideoCacher will try to download and run its own binaries, but if you'd like to use your system packages instead, set `ytdlPath` to `""` in `Config.json`, you'll need to install `deno`, `ffmpeg` and yt-dlp using `pip install "yt-dlp[default,curl-cffi]"` the pip version is required due to package manager versions not including browser impersonation, make sure to always keep yt-dlp updated otherwise you will run into issues.
+- Run with `./VRCVideoCacher.Client`
+- For this fork, the client mainly handles local URL proxying and patching. The media-side work is expected to be handled by NekoSuneVR infrastructure.
 
 ### Split Projects (Server/Client)
 
 This repo includes two separate projects:
-- `VRCVideoCacher.Server` for the Linux downloader/cache server.
-- `VRCVideoCacher.Client` for the Windows proxy/patch client.
+- `VRCVideoCacher.Server` for server-side downloader/proxy work.
+- `VRCVideoCacher.Client` for the proxy/patch client used by players.
 
 Build with:
 - Server: `dotnet build VRCVideoCacher.Server.sln -c Release`
 - Client: `dotnet build VRCVideoCacher.Client.sln -c Release`
+
+### TODO
+
+- Add livestream support for Kick
+- Add livestream support for DLive
+- Add more platforms over time through the same proxy system
+- Expand site-side integrations for more supported sources
 
 ### Uninstalling
 
@@ -57,11 +85,13 @@ Build with:
 
 ### Config Options
 
+Some options below still come from the upstream codebase. In this fork, the most important part is the local proxy client and the remote NekoSuneVR-managed server flow.
+
 | Option                    | Description                                                                                                                                                                                                                                                                                    |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ytdlWebServerURL          | Used to circumvent VRChats public world video player whitelist, see above for usage instructions.                                                                                                                                                                                              |
 | ytdlPath                  | Path to the yt-dlp executable, default `Utils\\yt-dlp.exe`, when set to `""` it will use global PATH instead, as a side effect this will disable the yt-dlp, ffmpeg and deno auto updater.                                                                                                     |
-| ytdlUseCookies            | Uses the [Chrome](https://github.com/clienthax/VRCVideoCacherBrowserExtension) or [Firefox](https://addons.mozilla.org/en-GB/android/addon/vrcvideocachercookiesexporter) extension for cookies, this is used to circumvent YouTubes bot detection.                                            |
+| ytdlUseCookies            | Legacy upstream option. In the NekoSuneVR fork you normally do not need local YouTube cookies because the server side manages that workflow.                                                                                                                                                   |
 | ytdlAutoUpdate            | Auto update yt-dlp, ffmpeg and deno.                                                                                                                                                                                                                                                           |
 | ytdlAdditionalArgs        | Add your own [yt-dlp args](https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#usage-and-options) (only add these if you know what you're doing)                                                                                                                                               |
 | ytdlDubLanguage           | Set preferred audio language for AVPro and cached videos, be warned you may end up with auto translated slop. e.g. `de` for German, check list of [supported lang codes](https://github.com/yt-dlp/yt-dlp/blob/c26f9b991a0681fd3ea548d535919cec1fbbd430/yt_dlp/extractor/youtube.py#L381-L390) |
@@ -89,5 +119,6 @@ Build with:
 | RemoteServerDisableLocalCache | Disable local cache usage and downloads when remote proxying is enabled.                                                                                                                                                                                                                    |
 | RemoteServerTimeoutSeconds | Timeout for remote server requests.                                                                                                                                                                                                                                                           |
 | RemoteServerUrls          | List of remote server base URLs for proxying, in order of priority, e.g. `[ "https://server1.example.com", "https://server2.example.com" ]`.                                                                                                                                                   |
+| VideoBypassBaseUrls       | Ordered list of video bypass base URLs used by this fork, e.g. `[ "https://dl.nekosunevr.co.uk", "https://dl.ballisticok.xyz" ]`. The client probes these in order and uses the first healthy endpoint.                                                                                     |
 
 > Generate PoToken has unfortunately been [deprecated](https://github.com/iv-org/youtube-trusted-session-generator?tab=readme-ov-file#tool-is-deprecated)
