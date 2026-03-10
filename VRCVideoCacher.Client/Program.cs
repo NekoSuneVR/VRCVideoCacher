@@ -10,7 +10,7 @@ namespace VRCVideoCacher;
 internal static class Program
 {
     public static string YtdlpHash = string.Empty;
-    public const string Version = "2026.03.10";
+    public const string Version = "2026.03.11";
     public static readonly ILogger Logger = Log.ForContext("SourceContext", "Core");
     public static readonly string CurrentProcessPath = Path.GetDirectoryName(Environment.ProcessPath) ?? string.Empty;
     public static readonly string DataPath = OperatingSystem.IsWindows()
@@ -59,17 +59,6 @@ internal static class Program
             _ = WinGet.TryInstallPackages();
 
         await Task.Delay(-1);
-    }
-
-    public static bool IsCookiesValid(string cookies)
-    {
-        if (string.IsNullOrEmpty(cookies))
-            return false;
-
-        if (cookies.Contains("youtube.com") && cookies.Contains("LOGIN_INFO"))
-            return true;
-
-        return false;
     }
 
     public static Stream GetYtDlpStub()

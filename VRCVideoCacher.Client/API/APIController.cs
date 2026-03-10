@@ -2,8 +2,6 @@ using System.Text;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using VRCVideoCacher.Models;
-using VRCVideoCacher.YTDL;
 
 namespace VRCVideoCacher.API;
 
@@ -15,33 +13,6 @@ public class ApiController : WebApiController
         Timeout = TimeSpan.FromSeconds(5)
     };
     
-    [Route(HttpVerbs.Post, "/youtube-cookies")]
-    public async Task ReceiveYoutubeCookies()
-    {
-        using var reader = new StreamReader(HttpContext.OpenRequestStream(), Encoding.UTF8);
-        var cookies = await reader.ReadToEndAsync();
-        if (!Program.IsCookiesValid(cookies))
-        {
-            Log.Error("Invalid cookies received, maybe you haven't logged in yet, not saving.");
-            HttpContext.Response.StatusCode = 400;
-            await HttpContext.SendStringAsync("Invalid cookies.", "text/plain", Encoding.UTF8);
-            return;
-        }
-
-        if (!RemoteServerProxy.IsEnabled)
-        {
-            HttpContext.Response.StatusCode = 503;
-            await HttpContext.SendStringAsync("Remote server not configured.", "text/plain", Encoding.UTF8);
-            return;
-        }
-
-        var (success, status, body) = await RemoteServerProxy.SendCookies(cookies);
-        HttpContext.Response.StatusCode = status;
-        await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
-        if (!success)
-            Log.Warning("Failed to forward cookies to remote server.");
-    }
-
     [Route(HttpVerbs.Get, "/getvideo")]
     public async Task GetVideo()
     {
@@ -70,6 +41,17 @@ public class ApiController : WebApiController
         }
 
         var proxyUrl = await BuildVideoBypassUrl(requestUrl);
+        if (ConfigManager.Config.LocalVideoCacheEnabled)
+        {
+            var localCacheUrl = await LocalVideoCacheManager.GetOrCreateCachedVideoUrl(requestUrl, proxyUrl);
+            if (!string.IsNullOrEmpty(localCacheUrl))
+            {
+                Log.Information("Responding with local cached URL: {URL}", localCacheUrl);
+                await HttpContext.SendStringAsync(localCacheUrl, "text/plain", Encoding.UTF8);
+                return;
+            }
+        }
+
         Log.Information("Responding with proxied URL: {URL}", proxyUrl);
         await HttpContext.SendStringAsync(proxyUrl, "text/plain", Encoding.UTF8);
     }

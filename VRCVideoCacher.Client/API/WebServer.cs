@@ -37,6 +37,7 @@ public class WebServer
                 .WithUrlPrefixes(urls)
                 .WithMode(HttpListenerMode.EmbedIO))
             // First, we will configure our web server by adding Modules.
+            .WithStaticFolder("/cache", LocalVideoCacheManager.CachePath, false)
             .WithWebApi("/api", m => m
                 .WithController<ApiController>());
 
