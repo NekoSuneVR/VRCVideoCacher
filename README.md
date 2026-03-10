@@ -24,6 +24,7 @@ Auto install missing codecs: [VP9](https://apps.microsoft.com/detail/9n4d0msmp0p
 - Forked from the original EllyVR project and reworked for NekoSuneVR-managed servers.
 - No need to manually download and store video files on your PC for normal playback.
 - No need to provide your own YouTube cookies. NekoSuneVR manages the server-side handling for you.
+- Safer for end users because your personal YouTube account cookies are not being used locally by the client.
 - Playback is proxy-based: the app mainly rewrites URLs and lets the server do the rest.
 - Added Suno integration so Suno links can be played through the video player.
 
@@ -40,6 +41,12 @@ This fork adds Suno link support through the proxy site, allowing Suno songs to 
 ### Why no YouTube cookies?
 
 Unlike the upstream local-first workflow, this fork is built around NekoSuneVR-managed server infrastructure. That means the cookie management, downloading flow, proxying, and media delivery are handled server-side instead of on your local machine.
+
+That is one of the main safety improvements in this fork. You are not expected to inject your own YouTube cookies into the client, so your personal account is less exposed to risk from local use. NekoSuneVR manages the server-side account flow and delivery pipeline for you.
+
+You can think of it like a managed yt-dlp API flow for VRChat-style video playback: the client asks the server for the playable URL path, the server handles the source platform side, and the player gets the proxied result. This makes it easier to support more sources quickly without pushing the hard parts onto the user's PC.
+
+This also means platform support can move faster. As the server-side integrations improve, new sites and media sources can be added much more quickly.
 
 ### Fix YouTube videos sometimes failing to play
 
@@ -77,6 +84,7 @@ Build with:
 - Add livestream support for DLive
 - Add more platforms over time through the same proxy system
 - Expand site-side integrations for more supported sources
+- Keep improving the managed server-side media pipeline so new platforms can be supported with minimal client changes
 
 ### Uninstalling
 
