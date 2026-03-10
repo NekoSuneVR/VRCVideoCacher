@@ -9,7 +9,7 @@ namespace VRCVideoCacher;
 
 internal static class Program
 {
-    public const string Version = "2025.11.24";
+    public const string Version = "2026.03.10";
     public static readonly ILogger Logger = Log.ForContext("SourceContext", "Core");
     private static readonly string AssemblyPath = Assembly.GetExecutingAssembly().Location;
     public static readonly string DataPath = Path.GetDirectoryName(AssemblyPath) ?? string.Empty;

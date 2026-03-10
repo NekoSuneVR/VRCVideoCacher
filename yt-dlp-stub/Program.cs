@@ -6,6 +6,11 @@ internal static class Program
 {
     private static string _logFilePath = string.Empty;
     private const string BaseUrl = "http://127.0.0.1:9696";
+    private static readonly string[] VideoBypassBaseUrls =
+    [
+        "https://dl.nekosunevr.co.uk",
+        "https://dl.ballisticok.xyz"
+    ];
 
     private static void WriteLog(string message)
     {
@@ -74,6 +79,9 @@ internal static class Program
         catch (HttpRequestException ex) when (ex.InnerException is SocketException socketEx && socketEx.SocketErrorCode == SocketError.ConnectionRefused)
         {
             WriteLog("[Error] Connection refused. Is the server running?");
+            var fallbackUrl = await BuildFallbackUrl(url);
+            WriteLog($"[Fallback] {fallbackUrl}");
+            Console.WriteLine(fallbackUrl);
             await Console.Error.WriteLineAsync("ERROR: [VRCVideoCacher] Connection refused. Is VRCVideoCacher running?");
             var ytdlPath = Path.Combine(appDataPath, "yt-dlp.exe");
             if (File.Exists(ytdlPath) && File.GetAttributes(ytdlPath).HasFlag(FileAttributes.ReadOnly))
@@ -82,7 +90,7 @@ internal static class Program
                 attr &= ~FileAttributes.ReadOnly;
                 File.SetAttributes(ytdlPath, attr);
             }
-            Environment.ExitCode = 1;
+            Environment.ExitCode = 0;
         }
         catch (Exception ex)
         {
@@ -90,5 +98,31 @@ internal static class Program
             await Console.Error.WriteLineAsync($"ERROR: [VRCVideoCacher] {ex.GetType().Name}: {ex.Message}");
             Environment.ExitCode = 1;
         }
+    }
+
+    private static async Task<string> BuildFallbackUrl(string url)
+    {
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
+
+        foreach (var baseUrl in VideoBypassBaseUrls)
+        {
+            var proxyUrl = $"{baseUrl}/api/videobypass?url={Uri.EscapeDataString(url)}";
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Head, proxyUrl);
+                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                if ((int)response.StatusCode < 500)
+                    return proxyUrl;
+            }
+            catch (Exception probeEx)
+            {
+                WriteLog($"[Fallback Probe Failed] {baseUrl}: {probeEx.Message}");
+            }
+        }
+
+        return $"{VideoBypassBaseUrls[0]}/api/videobypass?url={Uri.EscapeDataString(url)}";
     }
 }

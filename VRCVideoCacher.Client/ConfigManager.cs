@@ -33,6 +33,7 @@ public class ConfigManager
             Config.YouTubePoTokenUrl = Config.YouTubePoTokenUrl.Trim().TrimEnd('/');
         Config.RemoteServerUrls ??= [];
         Config.WebServerBindUrls ??= [];
+        Config.VideoBypassBaseUrls ??= [];
         if (Config.RemoteServerUrls.Length > 0)
         {
             Config.RemoteServerUrls = Config.RemoteServerUrls
@@ -45,6 +46,14 @@ public class ConfigManager
             Config.WebServerBindUrls = Config.WebServerBindUrls
                 .Where(url => !string.IsNullOrWhiteSpace(url))
                 .Select(url => url.Trim().TrimEnd('/'))
+                .ToArray();
+        }
+        if (Config.VideoBypassBaseUrls.Length > 0)
+        {
+            Config.VideoBypassBaseUrls = Config.VideoBypassBaseUrls
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Select(url => url.Trim().TrimEnd('/'))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }
 
@@ -116,6 +125,11 @@ public class ConfigModel
     public bool RemoteServerDisableLocalCache = true;
     public int RemoteServerTimeoutSeconds = 15;
     public string[] RemoteServerUrls = [];
+    public string[] VideoBypassBaseUrls =
+    [
+        "https://dl.nekosunevr.co.uk",
+        "https://dl.ballisticok.xyz"
+    ];
     
 }
 // ReSharper restore InconsistentNaming

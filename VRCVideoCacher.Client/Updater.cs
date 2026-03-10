@@ -9,16 +9,16 @@ namespace VRCVideoCacher;
 
 public class Updater
 {
-    private const string UpdateUrl = "https://api.github.com/repos/EllyVR/VRCVideoCacher/releases/latest";
+    private const string UpdateUrl = "https://api.github.com/repos/NekoSuneVR/VRCVideoCacher/releases/latest";
     private static readonly HttpClient HttpClient = new()
     {
         DefaultRequestHeaders = { { "User-Agent", "VRCVideoCacher.Updater" } }
     };
     private static readonly ILogger Log = Program.Logger.ForContext<Updater>();
-    private static readonly string FileName =  OperatingSystem.IsWindows() ? "VRCVideoCacher.exe" : "VRCVideoCacher";
-    private const string BackupFileName = "VRCVideoCacher.bkp";
-    private const string TempFileName = "VRCVideoCacher.Temp";
-    private static readonly string FilePath = Path.Combine(Program.CurrentProcessPath, FileName);
+    private static readonly string FilePath = Environment.ProcessPath ?? throw new InvalidOperationException("Current process path is unavailable.");
+    private static readonly string FileName = Path.GetFileName(FilePath);
+    private static readonly string BackupFileName = $"{Path.GetFileNameWithoutExtension(FileName)}.bkp";
+    private static readonly string TempFileName = $"{Path.GetFileNameWithoutExtension(FileName)}.tmp";
     private static readonly string BackupFilePath = Path.Combine(Program.CurrentProcessPath, BackupFileName);
     private static readonly string TempFilePath = Path.Combine(Program.CurrentProcessPath, TempFileName);
 
@@ -62,7 +62,7 @@ public class Updater
             return;
         }
         Log.Information(
-            "Auto Update is disabled. Please update manually from the releases page. https://github.com/EllyVR/VRCVideoCacher/releases");
+            "Auto Update is disabled. Please update manually from the releases page. https://github.com/NekoSuneVR/VRCVideoCacher/releases");
     }
         
     public static void Cleanup()
@@ -83,7 +83,7 @@ public class Updater
             try
             {
                 await using var stream = await HttpClient.GetStreamAsync(asset.browser_download_url);
-                await using var fileStream = new FileStream(TempFileName, FileMode.Create, FileAccess.Write, FileShare.None);
+                await using var fileStream = new FileStream(TempFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await stream.CopyToAsync(fileStream);
                 fileStream.Close();
 

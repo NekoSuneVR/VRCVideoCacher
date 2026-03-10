@@ -10,6 +10,10 @@ namespace VRCVideoCacher.API;
 public class ApiController : WebApiController
 {
     private static readonly Serilog.ILogger Log = Program.Logger.ForContext<ApiController>();
+    private static readonly HttpClient HttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(5)
+    };
     
     [Route(HttpVerbs.Post, "/youtube-cookies")]
     public async Task ReceiveYoutubeCookies()
@@ -43,8 +47,6 @@ public class ApiController : WebApiController
     {
         // escape double quotes for our own safety
         var requestUrl = Request.QueryString["url"]?.Replace("\"", "%22").Trim();
-        var avPro = string.Compare(Request.QueryString["avpro"], "true", StringComparison.OrdinalIgnoreCase) == 0;
-        var source = Request.QueryString["source"] ?? "vrchat";
         
         if (string.IsNullOrEmpty(requestUrl))
         {
@@ -67,38 +69,42 @@ public class ApiController : WebApiController
             requestUrl = ConfigManager.Config.BlockRedirect;
         }
 
-        var videoInfo = await VideoId.GetVideoId(requestUrl, avPro);
-        if (videoInfo == null)
+        var proxyUrl = await BuildVideoBypassUrl(requestUrl);
+        Log.Information("Responding with proxied URL: {URL}", proxyUrl);
+        await HttpContext.SendStringAsync(proxyUrl, "text/plain", Encoding.UTF8);
+    }
+
+    private static async Task<string> BuildVideoBypassUrl(string requestUrl)
+    {
+        var candidates = ConfigManager.Config.VideoBypassBaseUrls.Length > 0
+            ? ConfigManager.Config.VideoBypassBaseUrls
+            : ["https://dl.nekosunevr.co.uk", "https://dl.ballisticok.xyz"];
+
+        foreach (var baseUrl in candidates)
         {
-            Log.Information("Failed to get Video Info for URL: {URL}", requestUrl);
-            return;
+            var proxyUrl = $"{baseUrl}/api/videobypass?url={Uri.EscapeDataString(requestUrl)}";
+            if (await IsEndpointAvailable(proxyUrl))
+                return proxyUrl;
         }
 
-        if (videoInfo.UrlType != UrlType.YouTube)
+        var fallbackBaseUrl = candidates[0];
+        return $"{fallbackBaseUrl}/api/videobypass?url={Uri.EscapeDataString(requestUrl)}";
+    }
+
+    private static async Task<bool> IsEndpointAvailable(string proxyUrl)
+    {
+        try
         {
-            Log.Information("Non-YouTube URL: bypassing.");
-            await HttpContext.SendStringAsync(string.Empty, "text/plain", Encoding.UTF8);
-            return;
+            using var request = new HttpRequestMessage(HttpMethod.Head, proxyUrl);
+            using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            if ((int)response.StatusCode < 500)
+                return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Video bypass endpoint probe failed: {Error}", ex.Message);
         }
 
-        if (!RemoteServerProxy.IsEnabled)
-        {
-            Log.Error("Remote server not configured for YouTube.");
-            HttpContext.Response.StatusCode = 503;
-            await HttpContext.SendStringAsync("Remote server not configured.", "text/plain", Encoding.UTF8);
-            return;
-        }
-
-        var (remoteSuccess, status, body) = await RemoteServerProxy.GetVideo(requestUrl, avPro, source);
-        if (remoteSuccess)
-        {
-            Log.Information("Responding with Remote URL: {URL}", body);
-            await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
-            return;
-        }
-
-        Log.Error("All remote nodes failed to fetch URL.");
-        HttpContext.Response.StatusCode = status;
-        await HttpContext.SendStringAsync(body, "text/plain", Encoding.UTF8);
+        return false;
     }
 }
