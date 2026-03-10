@@ -75,7 +75,7 @@ public class ConfigManager
 // ReSharper disable InconsistentNaming
 public class ConfigModel
 {
-    public string ytdlWebServerURL = "http://localhost:9696";
+    public string ytdlWebServerURL = "http://127.0.0.1:9696";
     public string[] WebServerBindUrls = ["http://127.0.0.1:9696"];
     public string[] BlockedUrls = ["https://na2.vrdancing.club/sampleurl.mp4"];
     public string BlockRedirect = "https://www.youtube.com/watch?v=byv2bKekeWQ";
