@@ -8,8 +8,8 @@ permissions:
   contents: write
 
 jobs:
-  build-client:
-    runs-on: ubuntu-latest
+  build-windows-client:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -20,8 +20,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore
-        run: dotnet restore VRCVideoCacher.Client/VRCVideoCacher.Client.csproj
+      - name: Restore Windows client
+        run: dotnet restore VRCVideoCacher.Client/VRCVideoCacher.Client.csproj -r win-x64
 
       - name: Publish Windows client
         run: >
@@ -35,6 +35,26 @@ jobs:
           -p:IncludeAllContentForSelfExtract=true
           -o out/win-x64
 
+      - name: Upload Windows asset to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/win-x64/VRCVideoCacher.Client.exe
+
+  build-linux-client:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore Linux client
+        run: dotnet restore VRCVideoCacher.Client/VRCVideoCacher.Client.csproj -r linux-x64
+
       - name: Publish Linux client
         run: >
           dotnet publish VRCVideoCacher.Client/VRCVideoCacher.Client.csproj
@@ -46,11 +66,6 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:IncludeAllContentForSelfExtract=true
           -o out/linux-x64
-
-      - name: Upload Windows asset to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/win-x64/VRCVideoCacher.Client.exe
 
       - name: Upload Linux asset to release
         uses: softprops/action-gh-release@v2
