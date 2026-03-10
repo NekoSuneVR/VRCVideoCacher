@@ -20,11 +20,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore win-x64
-        run: dotnet restore VRCVideoCacher.Client/VRCVideoCacher.Client.csproj -r win-x64
-
-      - name: Restore linux-x64
-        run: dotnet restore VRCVideoCacher.Client/VRCVideoCacher.Client.csproj -r linux-x64
+      - name: Restore
+        run: dotnet restore VRCVideoCacher.Client/VRCVideoCacher.Client.csproj
 
       - name: Publish Windows client
         run: >
