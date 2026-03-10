@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Semver;
 using Serilog;
@@ -47,8 +48,8 @@ public class Updater
             Log.Error("Failed to parse update response.");
             return;
         }
-        var latestVersion = SemVersion.Parse(latestRelease.tag_name);
-        var currentVersion = SemVersion.Parse(Program.Version);
+        var latestVersion = ParseVersion(latestRelease.tag_name);
+        var currentVersion = ParseVersion(Program.Version);
         Log.Information("Latest release: {Latest}, Installed Version: {Installed}", latestVersion, currentVersion);
         if (SemVersion.ComparePrecedence(currentVersion, latestVersion) >= 0)
         {
@@ -133,5 +134,32 @@ public class Updater
         var hashMatches = string.Equals(githubHash, hashString, StringComparison.OrdinalIgnoreCase);
         Log.Information("FileHash: {FileHash} GitHubHash: {GitHubHash} HashMatch: {HashMatches}", hashString, githubHash, hashMatches);
         return hashMatches;
+    }
+
+    private static SemVersion ParseVersion(string version)
+    {
+        var normalized = NormalizeVersion(version);
+        return SemVersion.Parse(normalized);
+    }
+
+    private static string NormalizeVersion(string version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+            throw new FormatException("Version string is empty.");
+
+        var trimmed = version.Trim();
+        if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+            trimmed = trimmed[1..];
+
+        var match = Regex.Match(trimmed, @"^(?<core>\d+(?:\.\d+){0,2})(?<suffix>.*)$");
+        if (!match.Success)
+            return trimmed;
+
+        var core = match.Groups["core"].Value
+            .Split('.', StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => int.Parse(part).ToString())
+            .ToArray();
+
+        return string.Join(".", core) + match.Groups["suffix"].Value;
     }
 }
