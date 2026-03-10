@@ -9,6 +9,8 @@ public class WinGet
 {
     private static readonly ILogger Log = Program.Logger.ForContext<WinGet>();
     private const string WingetExe = "winget.exe";
+    private static bool _sourceUnavailableLogged;
+    private static bool _skipWingetChecks;
     private static readonly Dictionary<string, string> WingetPackages = new()
     {
         { "VP9 Video Extensions", "9n4d0msmp0pt" },
@@ -19,9 +21,14 @@ public class WinGet
     [SupportedOSPlatform("windows")]
     public static async Task TryInstallPackages()
     {
+        if (_skipWingetChecks)
+            return;
+
         Log.Information("Checking for missing codec packages...");
         if (!IsOurPackagesInstalled())
         {
+            if (_skipWingetChecks)
+                return;
             Log.Information("Installing missing codec packages...");
             await InstallAllPackages();
         }
@@ -60,7 +67,14 @@ public class WinGet
                 }
             };
             process.Start();
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
             process.WaitForExit();
+            if (ShouldSkipWinget(error) || ShouldSkipWinget(output))
+            {
+                LogWingetUnavailable(error, output);
+                return true;
+            }
             return process.ExitCode == 0;
         }
         catch (Exception ex)
@@ -105,6 +119,11 @@ public class WinGet
             }
             var error = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
+            if (ShouldSkipWinget(error))
+            {
+                LogWingetUnavailable(error, string.Empty);
+                return;
+            }
             if (process.ExitCode != 0 && !string.IsNullOrEmpty(error))
                 throw new Exception($"Installation failed with exit code {process.ExitCode}. Error: {error}");
             
@@ -116,5 +135,24 @@ public class WinGet
         {
             Log.Error(ex.Message);
         }
+    }
+
+    private static bool ShouldSkipWinget(string text)
+    {
+        return !string.IsNullOrWhiteSpace(text) &&
+               (text.Contains("0x8a15005e", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("The server certificate did not match any of the expected values", StringComparison.OrdinalIgnoreCase) ||
+                text.Contains("Failed when opening source(s)", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void LogWingetUnavailable(string error, string output)
+    {
+        _skipWingetChecks = true;
+        if (_sourceUnavailableLogged)
+            return;
+
+        var details = string.IsNullOrWhiteSpace(error) ? output.Trim() : error.Trim();
+        Log.Warning("Skipping codec auto-install because winget source access is broken. {Details}", details);
+        _sourceUnavailableLogged = true;
     }
 }

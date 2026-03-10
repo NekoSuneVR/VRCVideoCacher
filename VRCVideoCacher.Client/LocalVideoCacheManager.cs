@@ -68,12 +68,42 @@ public static class LocalVideoCacheManager
 
     private static string BuildLocalUrl(string fileName)
     {
-        return $"{ConfigManager.Config.ytdlWebServerURL}/cache/{Uri.EscapeDataString(fileName)}";
+        return $"{ConfigManager.Config.ytdlWebServerURL}/api/cache/{Uri.EscapeDataString(fileName)}";
     }
 
     private static string GetCacheKey(string sourceUrl)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sourceUrl))).ToLowerInvariant();
+    }
+
+    public static string? TryGetCachedFilePath(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            return null;
+
+        var fullPath = Path.GetFullPath(Path.Combine(CachePath, fileName));
+        var rootPath = Path.GetFullPath(CachePath);
+        if (!fullPath.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (!File.Exists(fullPath))
+            return null;
+
+        return fullPath;
+    }
+
+    public static string GetMimeType(string filePath)
+    {
+        return Path.GetExtension(filePath).ToLowerInvariant() switch
+        {
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            ".mp3" => "audio/mpeg",
+            ".m4a" => "audio/mp4",
+            ".weba" => "audio/webm",
+            _ => "application/octet-stream"
+        };
     }
 
     private static string GetFileExtension(HttpResponseMessage response)

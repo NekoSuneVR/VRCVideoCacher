@@ -56,6 +56,34 @@ public class ApiController : WebApiController
         await HttpContext.SendStringAsync(proxyUrl, "text/plain", Encoding.UTF8);
     }
 
+    [Route(HttpVerbs.Get, "/cache/{fileName}")]
+    public async Task GetCachedVideo(string fileName)
+    {
+        var decodedFileName = Uri.UnescapeDataString(fileName);
+        var cachedFilePath = LocalVideoCacheManager.TryGetCachedFilePath(decodedFileName);
+        if (string.IsNullOrEmpty(cachedFilePath))
+        {
+            HttpContext.Response.StatusCode = 404;
+            await HttpContext.SendStringAsync("Cached file not found.", "text/plain", Encoding.UTF8);
+            return;
+        }
+
+        try
+        {
+            await using var input = new FileStream(cachedFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            HttpContext.Response.ContentType = LocalVideoCacheManager.GetMimeType(cachedFilePath);
+            HttpContext.Response.ContentLength64 = input.Length;
+            await using var output = HttpContext.OpenResponseStream();
+            await input.CopyToAsync(output);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning("Failed to serve cached file {FileName}: {Error}", decodedFileName, ex.Message);
+            HttpContext.Response.StatusCode = 500;
+            await HttpContext.SendStringAsync("Failed to serve cached file.", "text/plain", Encoding.UTF8);
+        }
+    }
+
     private static async Task<string> BuildVideoBypassUrl(string requestUrl)
     {
         var candidates = ConfigManager.Config.VideoBypassBaseUrls.Length > 0

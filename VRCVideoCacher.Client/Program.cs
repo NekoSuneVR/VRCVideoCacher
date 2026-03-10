@@ -10,7 +10,7 @@ namespace VRCVideoCacher;
 internal static class Program
 {
     public static string YtdlpHash = string.Empty;
-    public const string Version = "2026.03.11";
+    public const string Version = "2026.03.12";
     public static readonly ILogger Logger = Log.ForContext("SourceContext", "Core");
     public static readonly string CurrentProcessPath = Path.GetDirectoryName(Environment.ProcessPath) ?? string.Empty;
     public static readonly string DataPath = OperatingSystem.IsWindows()
